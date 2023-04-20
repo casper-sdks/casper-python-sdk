@@ -10,6 +10,7 @@ from pycspr.api.sse_types import NodeEventChannel, NodeEventInfo
 from pycspr.api.sse_types import NodeEventType
 from pycspr.types.identifiers import GlobalStateID
 from pycspr.types.identifiers import GlobalStateIDType
+from pycspr.types.identifiers import PurseID
 
 
 class NodeClient():
@@ -25,6 +26,7 @@ class NodeClient():
         self.connection = connection
         self._get_rest_response = connection.get_rest_response
         self._get_rpc_response = connection.get_rpc_response
+        self._get_speculative_rpc_response = connection.get_speculative_rpc_response
 
     async def await_n_blocks(self, offset: int):
         """Awaits until linear block chain has advanced by N blocks.
@@ -90,21 +92,21 @@ class NodeClient():
 
     def get_account_balance(
         self,
-        purse_uref: types.CL_URef,
+        purse_id: PurseID,
         state_root_hash: types.StateRootHash = None
     ) -> int:
         """Returns account balance at a certain global state root hash.
 
-        :param purse_uref: URef of a purse associated with an on-chain account.
+        :param purse_id: Identifier associated with a purse under which a balance resides.
         :param state_root_hash: A node's root state hash at some point in chain time.
         :returns: Account balance if on-chain account is found.
 
         """
         state_root_hash = state_root_hash or self.get_state_root_hash()
-        params = params_factory.get_account_balance_params(purse_uref, state_root_hash)
-        response = self._get_rpc_response(constants.RPC_STATE_GET_BALANCE, params)
+        params = params_factory.get_account_balance_params(purse_id, state_root_hash)
+        response = self._get_rpc_response(constants.RPC_STATE_QUERY_BALANCE, params)
 
-        return int(response["balance_value"])
+        return int(response["balance"])
 
     def get_account_info(
         self,
@@ -190,7 +192,7 @@ class NodeClient():
         polling_interval_seconds: float = 1.0,
         max_polling_time_seconds: float = 120.0
     ) -> dict:
-        """Returns last finalised block in current era.
+        """Returns next switch block.
 
         :param polling_interval_seconds: Time interval time before polling for next switch block.
         :param max_polling_time_seconds: Maximum time in seconds to poll.
@@ -228,7 +230,7 @@ class NodeClient():
         :returns: On-chain block transfers information.
 
         """
-        response = self._get_rpc_response(
+        response: dict = self._get_rpc_response(
             constants.RPC_CHAIN_GET_BLOCK_TRANSFERS,
             params_factory.get_block_transfers_params(block_id)
             )
@@ -244,6 +246,16 @@ class NodeClient():
         block: dict = self.get_block()
 
         return block["header"]["era_id"], block["header"]["height"]
+
+    def get_chain_spec(self) -> dict:
+        """Returns raw bytes of the chainspec.toml, genesis accounts.toml, and global_state.toml files.
+
+        :returns: Chain specification information.
+
+        """
+        response: dict = self._get_rpc_response(constants.RPC_INFO_GET_CHAINSPEC)
+
+        return response["chainspec_bytes"]
 
     def get_deploy(self, deploy_id: types.DeployID) -> dict:
         """Returns on-chain deploy information.
@@ -282,9 +294,9 @@ class NodeClient():
         :returns: Hieght of current era.
 
         """
-        era_hieght, _ = self.get_chain_heights()
+        era_height, _ = self.get_chain_heights()
 
-        return era_hieght
+        return era_height
 
     def get_era_info(self, block_id: types.BlockID = None) -> dict:
         """Returns consensus era information.
@@ -421,7 +433,7 @@ class NodeClient():
 
         return response["stored_value"]
 
-    def get_state_root_hash(self, block_id: types.BlockID = None) -> bytes:
+    def get_state_root_hash(self, block_id: types.BlockID = None) -> types.StateRootHash:
         """Returns an root hash of global state at a specified block.
 
         :param block_id: Identifier of a finalised block.
@@ -458,6 +470,18 @@ class NodeClient():
             )
 
         return response["deploy_hash"]
+
+    def speculative_exec(self, deploy: types.Deploy, block_id: types.BlockID = None):
+        """Dispatches a deploy to a node for speculative processing.
+
+        :param deploy: A deploy to be speculatively processed at a node.
+        :param block_id: Identifier of a finalised block.
+
+        """
+        return self._get_speculative_rpc_response(
+            constants.SPECULATIVE_RPC_EXEC_DEPLOY,
+            params_factory.speculative_exec_params(deploy, block_id)
+            )
 
     def query_global_state(
         self,

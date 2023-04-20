@@ -3,6 +3,9 @@ import enum
 import typing
 
 
+# The output of a one way hashing function.
+Digest = typing.Union[bytes, str]
+
 # An account identifier may be a byte array of 33 bytes,
 # a hexadecimal string of 66 characters.
 AccountID = typing.Union[bytes, str]
@@ -20,11 +23,15 @@ ContractVersion = typing.NewType("U32 integer representing", int)
 # A deploy identifier is a 32 byte array or it's hexadecimal string equivalent.
 DeployID = typing.Union[bytes, str]
 
+# A purse identifier under which an account balance resides.
+PurseID = typing.Union[bytes, object]
+
 
 class GlobalStateIDType(enum.Enum):
     """Enumeration over set of CL type keys.
 
     """
+    # TODO: extend -> BlockHash`, `BlockHeight`, `StateRootHash
     STATE_ROOT = enum.auto()
     BLOCK = enum.auto()
 
@@ -32,7 +39,7 @@ class GlobalStateIDType(enum.Enum):
 @dataclasses.dataclass
 class GlobalStateID():
     # 32 byte global state identifier, either a block or state root hash.
-    identifier: bytes
+    identifier: typing.Union[bytes, int]
 
     # Type of identifier.
     id_type: GlobalStateIDType

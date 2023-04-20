@@ -8,6 +8,102 @@ from pycspr.types.cl_values import CL_Key
 
 
 def get_account_balance_params(
+    purse_id: types.PurseID,
+    state_root_hash: types.StateRootHash = None
+) -> dict:
+    """Returns JSON-RPC API request parameters.
+
+    :param purse_id: An identifier associated with a purse under which a balance resides.
+    :param state_root_hash: A node's root state hash at a point in chain time.
+    :returns: JSON-RPC API parameter set.
+
+    """
+    if isinstance(purse_id, types.CL_URef):
+        result = {
+            "purse_identifier": {
+                "purse_uref": serialisation.cl_value_to_parsed(purse_id)
+            },
+        }
+    elif isinstance(purse_id, bytes):
+        if len(purse_id) == 32:
+            result = {
+                "purse_identifier": {
+                    "main_purse_under_account_hash": f"account-hash-{purse_id.hex()}"
+                },
+            }
+        else:
+            result = {
+                "purse_identifier": {
+                    "main_purse_under_public_key": purse_id.hex()
+                },
+            }
+    else:
+        raise ValueError("Invalid purse identifier")
+
+    # TODO: state identifier can be either StateRootHash | Block Height | Block Hash
+    if isinstance(state_root_hash, bytes):
+        state_root_hash = state_root_hash.hex()
+
+    return result | {
+        "state_identifier": {
+            "StateRootHash": state_root_hash
+        }
+    }
+
+
+def get_account_balance_under_account_hash_params(
+    account_hash: types.AccountID,
+    state_root_hash: types.StateRootHash = None
+) -> dict:
+    """Returns JSON-RPC API request parameters.
+
+    :param account_hash: On-chain account address derived from account public key.
+    :param state_root_hash: A node's root state hash at a point in chain time.
+    :returns: JSON-RPC API parameter set.
+
+    """
+    if isinstance(account_hash, bytes):
+        account_hash = account_hash.hex()
+    if isinstance(state_root_hash, bytes):
+        state_root_hash = state_root_hash.hex()
+
+    return {
+        "purse_identifier": {
+            "main_purse_under_account_hash": f"account-hash-{account_hash}"
+        },
+        "state_identifier": {
+            "StateRootHash": state_root_hash
+        }
+    }
+
+
+def get_account_balance_under_account_key_params(
+    account_key: types.AccountID,
+    state_root_hash: types.StateRootHash = None
+) -> dict:
+    """Returns JSON-RPC API request parameters.
+
+    :param account_key: Account public key prefixed with a key type identifier.
+    :param state_root_hash: A node's root state hash at a point in chain time.
+    :returns: JSON-RPC API parameter set.
+
+    """
+    if isinstance(account_key, bytes):
+        account_key = account_key.hex()
+    if isinstance(state_root_hash, bytes):
+        state_root_hash = state_root_hash.hex()
+
+    return {
+        "purse_identifier": {
+            "main_purse_under_public_key": account_key
+        },
+        "state_identifier": {
+            "StateRootHash": state_root_hash
+        }
+    }
+
+
+def get_account_balance_under_purse_uref_params(
     purse_uref: typing.Union[str, types.CL_URef],
     state_root_hash: types.StateRootHash = None
 ) -> dict:
@@ -24,8 +120,12 @@ def get_account_balance_params(
         state_root_hash = state_root_hash.hex()
 
     return {
-        "purse_uref": purse_uref,
-        "state_root_hash": state_root_hash
+        "purse_identifier": {
+            "purse_uref": purse_uref
+        },
+        "state_identifier": {
+            "StateRootHash": state_root_hash
+        }
     }
 
 
@@ -154,7 +254,7 @@ def get_dictionary_item_params(identifier: types.DictionaryID, state_root_hash: 
                 "dictionary_item_key": identifier.dictionary_item_key,
                 "dictionary_name": identifier.dictionary_name,
                 "key": f"hash-{cl_checksum.encode_account_id(identifier.account_key)}"
-            }            
+            }
         }
 
     elif isinstance(identifier, types.DictionaryID_ContractNamedKey):
@@ -163,7 +263,7 @@ def get_dictionary_item_params(identifier: types.DictionaryID, state_root_hash: 
                 "dictionary_item_key": identifier.dictionary_item_key,
                 "dictionary_name": identifier.dictionary_name,
                 "key": f"hash-{cl_checksum.encode_contract_id(identifier.contract_key)}"
-            }          
+            }
         }
 
     elif isinstance(identifier, types.DictionaryID_SeedURef):
@@ -171,14 +271,14 @@ def get_dictionary_item_params(identifier: types.DictionaryID, state_root_hash: 
             "URef": {
                 "dictionary_item_key": identifier.dictionary_item_key,
                 "seed_uref": identifier.dictionary_name
-            }     
+            }
         }
 
     elif isinstance(identifier, types.DictionaryID_UniqueKey):
         result["dictionary_identifier"] = {
-            "Dictionary": identifier.seed_uref.as_string()   
+            "Dictionary": identifier.seed_uref.as_string()
         }
-    
+
     return result
 
 
@@ -220,7 +320,7 @@ def get_query_global_state_params(
         state_id_type = "BlockHash"
     else:
         state_id_type = "StateRootHash"
-    
+
     state_id = \
         state_id.identifier.hex() if isinstance(state_id.identifier, bytes) else \
         state_id.identifier
@@ -287,3 +387,35 @@ def put_deploy_params(deploy: types.Deploy) -> dict:
     return {
         "deploy": serialisation.to_json(deploy)
     }
+
+
+def speculative_exec_params(
+    deploy: types.Deploy,
+    block_id: types.BlockID = None
+    ) -> dict:
+    """Returns JSON-RPC API request parameters.
+
+    :param deploy: A deploy to be dispatched to a node.
+    :param block_id: Identifier of a finalised block.
+    :returns: Parameters to be passed to JSON-RPC API.
+
+    """
+    if isinstance(block_id, (bytes, str)):
+        return {
+            "block_identifier": {
+                "Hash": cl_checksum.encode_block_id(block_id)
+            },
+            "deploy": serialisation.to_json(deploy)
+        }
+    elif isinstance(block_id, int):
+        return {
+            "block_identifier": {
+                "Height": block_id
+            },
+            "deploy": serialisation.to_json(deploy)
+        }
+    else:
+        return {
+            "block_identifier": None,
+            "deploy": serialisation.to_json(deploy)
+        }
