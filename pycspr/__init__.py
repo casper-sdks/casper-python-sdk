@@ -7,11 +7,7 @@
 #  88              d8'                              88
 
 __title__ = "pycspr"
-<<<<<<< HEAD
-__version__ = "0.12.4"
-=======
 __version__ = "0.13.0"
->>>>>>> dev
 __author__ = "Mark A. Greenslade et al"
 __license__ = "Apache 2.0"
 

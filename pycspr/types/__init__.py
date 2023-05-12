@@ -72,6 +72,7 @@ from pycspr.types.identifiers import BlockID
 from pycspr.types.identifiers import ContractID
 from pycspr.types.identifiers import ContractVersion
 from pycspr.types.identifiers import DeployID
+from pycspr.types.identifiers import Digest
 from pycspr.types.identifiers import DictionaryID
 from pycspr.types.identifiers import DictionaryID_AccountNamedKey
 from pycspr.types.identifiers import DictionaryID_ContractNamedKey

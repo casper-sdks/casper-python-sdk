@@ -120,12 +120,11 @@ class NodeClient():
         :returns: Account information in JSON format.
 
         """
-        response = self._get_rpc_response(
+        return self._get_rpc_response(
             constants.RPC_STATE_GET_ACCOUNT_INFO,
-            params_factory.get_account_info_params(account_id, block_id)
+            params_factory.get_account_info_params(account_id, block_id),
+            "account"
             )
-
-        return response["account"]
 
     def get_account_main_purse_uref(
         self,
@@ -446,6 +445,20 @@ class NodeClient():
             )
 
         return bytes.fromhex(response["state_root_hash"])
+
+    def get_state_trie(self, trie_key: types.Digest) -> typing.Union[bytes, None]:
+        """Returns an item stored under a key in global state.
+
+        :param trie_key: Key of a trie store key.
+        :returns: A global state trie leaf.
+
+        """
+        response = self._get_rpc_response(
+            constants.RPC_STATE_GET_TRIE,
+            params_factory.get_state_trie_params(trie_key)
+            )
+        
+        return bytes.fromhex(response["maybe_trie_bytes"]) if response["maybe_trie_bytes"] else None
 
     def get_validator_changes(self) -> dict:
         """Returns status changes of active validators.

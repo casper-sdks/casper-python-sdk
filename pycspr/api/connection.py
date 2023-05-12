@@ -78,19 +78,28 @@ class NodeConnection:
 
         return response.content.decode("utf-8")
 
-    def get_rpc_response(self, endpoint: str, params: dict = None) -> dict:
+    def get_rpc_response(self, endpoint: str, params: dict = None, field: str=None) -> dict:
         """Invokes remote JSON-RPC API and returns parsed response.
 
         :endpoint: Target endpoint to invoke.
         :params: Endpoints parameters.
+        :field: Response field to destructure.
         :returns: Parsed JSON-RPC response.
 
         """
-        return self._get_rpc_response(
+        response = self._get_rpc_response(
             self.address_rpc,
             endpoint,
             params
         )
+
+        if field:
+            if field in response:
+                return response[field]
+            else:
+                return None
+        else:
+            return response
 
     def get_speculative_rpc_response(self, endpoint: str, params: dict = None) -> dict:
         """Invokes remote speculative JSON-RPC API and returns parsed response.

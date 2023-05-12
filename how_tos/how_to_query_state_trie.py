@@ -1,35 +1,11 @@
 import argparse
-import os
-import pathlib
 
-import pycspr
 from pycspr import NodeClient
 from pycspr import NodeConnection
-from pycspr.types import CL_Key
-from pycspr.types import PrivateKey
-from pycspr.types import PublicKey
 
-
-def _get_default_account_id():
-    return "ed1fa62fe1913ab0aa6b8eea70b89967a9b5f0b21f51678134a95dc82421ce9d"
-	pycspr.create_deploy_approval
-	# pathlib.Path(os.getenv("NCTL")) / "assets" / "net-1" / "users" / "user-1"
-
-
-# Path to NCTL assets.
-_PATH_TO_NCTL_ASSETS = pathlib.Path(os.getenv("NCTL")) / "assets" / "net-1"
 
 # CLI argument parser.
-_ARGS = argparse.ArgumentParser("Demo illustrating how to qeury on-chain account information.")
-
-# CLI argument: hex encoded key of an on-chain account identifier - defaults to NCTL user 1.
-_ARGS.add_argument(
-    "--account-id",
-    default=_get_default_account_id(),
-    dest="account_id",
-    help="Hex encoded key of an on-chain account identifier.",
-    type=str,
-    )
+_ARGS = argparse.ArgumentParser("Demo illustrating how to qeury global state trie store.")
 
 # CLI argument: name of target chain - defaults to NCTL chain.
 _ARGS.add_argument(
@@ -58,6 +34,14 @@ _ARGS.add_argument(
     type=int,
     )
 
+# CLI argument: path to trie store key.
+_ARGS.add_argument(
+    "--trie-key",
+    dest="trie_key",
+    help="Hex encoded key of a leaf within global state trie store.",
+    type=str,
+    )
+
 
 def _main(args: argparse.Namespace):
     """Main entry point.
@@ -68,11 +52,12 @@ def _main(args: argparse.Namespace):
     # Set node client.
     client: NodeClient = _get_client(args)
 
-    print(str(args.account_id))
+    # Set node JSON-RPC query response.
+    response = client.get_state_trie(args.trie_key)
 
-    response = client.get_account_info(args.account_id)
-
-    # print(response)
+    print("-" * 72)
+    print(response.hex() if response else response)
+    print("-" * 72)
 
 
 def _get_client(args: argparse.Namespace) -> NodeClient:

@@ -377,6 +377,18 @@ def get_state_root_hash_params(block_id: types.BlockID = None) -> dict:
         }
 
 
+def get_state_trie_params(trie_key: types.Digest) -> dict:
+    """Returns JSON-RPC API request parameters.
+
+    :param trie_key: Key of a trie store key.
+    :returns: Parameters to be passed to JSON-RPC API.
+
+    """
+    return {
+        "trie_key": cl_checksum.encode_digest(trie_key)
+    }
+
+
 def put_deploy_params(deploy: types.Deploy) -> dict:
     """Returns JSON-RPC API request parameters.
 
